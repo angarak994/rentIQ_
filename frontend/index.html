@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>rentIQ | High-Precision Property Asset Management</title>
+
+  <!-- Anti-FOUC Script -->
+  <script>
+    const storedTheme = localStorage.getItem('rc_theme');
+    if (storedTheme === 'dark' || (!storedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    } else if (storedTheme === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+  </script>
+
+  <!-- CSS LINK -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Icons -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .glow-pulse {
+      animation: glowPulseAnim 1.8s ease-in-out 3;
+    }
+    @keyframes glowPulseAnim {
+      0% { border-color: var(--border); box-shadow: none; }
+      50% { border-color: var(--accent); box-shadow: 0 0 16px rgba(99, 102, 241, 0.4); }
+      100% { border-color: var(--border); box-shadow: none; }
+    }
+    .scroll-progress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 0%;
+      height: 3px;
+      background: linear-gradient(to right, var(--accent), #818cf8);
+      z-index: 9999;
+    }
+    .reveal {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Toast Notification */
+    .toast-container {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .toast {
+      background: var(--bg-surface);
+      border-left: 4px solid var(--status-paid-text);
+      padding: 16px 20px;
+      border-radius: var(--radius-lg);
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 300px;
+      animation: toastSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      border: 1px solid var(--border);
+    }
+    @keyframes toastSlideIn {
+      from { opacity: 0; transform: translateX(100%) scale(0.9); }
+      to { opacity: 1; transform: translateX(0) scale(1); }
+    }
+    .toast-icon {
+      color: var(--status-paid-text);
+      font-size: 20px;
+    }
+    .toast-content h4 { font-size: 14px; font-weight: 700; margin: 0; color: var(--text-main); }
+    .toast-content p { font-size: 12px; color: var(--text-dim); margin: 4px 0 0; }
+  </style>
+</head>
+
+<body>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+  <div class="scroll-progress" id="scroll-progress"></div>
+  <div id="toast-container" class="toast-container"></div>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div style="display: flex; align-items: center; width: 100%;">
+        <div class="logo">
+          <i class="fa-solid fa-brain"></i>
+          <span style="letter-spacing: -1px; font-weight: 800;">rent<span style="color: var(--accent);">IQ</span></span>
+        </div>
+      </div>
+
+      <nav class="nav-menu" role="tablist" aria-label="Main Navigation">
+        <a href="#" class="nav-item active" data-tab="dashboard" role="tab" aria-selected="true" aria-controls="tab-dashboard" id="tab-dashboard-btn" tabindex="0">
+          <i class="fa-solid fa-house"></i>
+          <span>Overview</span>
+        </a>
+
+        <a href="#" class="nav-item" data-tab="analytics" role="tab" aria-selected="false" aria-controls="tab-analytics" id="tab-analytics-btn" tabindex="0">
+          <i class="fa-solid fa-chart-pie"></i>
+          <span>Analytics</span>
+        </a>
+        <a href="#" class="nav-item" data-tab="calendar" role="tab" aria-selected="false" aria-controls="tab-calendar" id="tab-calendar-btn" tabindex="0">
+          <i class="fa-solid fa-calendar"></i>
+          <span>Calendar</span>
+        </a>
+        <a href="#" class="nav-item" data-tab="directory" role="tab" aria-selected="false" aria-controls="tab-directory" id="tab-directory-btn" tabindex="0">
+          <i class="fa-solid fa-address-book"></i>
+          <span>Records</span>
+        </a>
+        <a href="#" class="nav-item" data-tab="expenses" role="tab" aria-selected="false" aria-controls="tab-expenses" id="tab-expenses-btn" tabindex="0">
+          <i class="fa-solid fa-receipt"></i>
+          <span>Expenses</span>
+        </a>
+        <a href="#" class="nav-item" data-tab="deposits" role="tab" aria-selected="false" aria-controls="tab-deposits" id="tab-deposits-btn" tabindex="0">
+          <i class="fa-solid fa-vault"></i>
+          <span>Deposits</span>
+        </a>
+        <a href="#" class="nav-item" data-tab="timeline" role="tab" aria-selected="false" aria-controls="tab-timeline" id="tab-timeline-btn" tabindex="0">
+          <i class="fa-solid fa-chart-line"></i>
+          <span>Timeline</span>
+        </a>
+
+      </nav>
+
+
+
+      <div class="owner-profile-card">
+        <div class="owner-avatar">
+          <img src="https://ui-avatars.com/api/?name=Angarak+Tate&background=4f46e5&color=fff" alt="Owner">
+          <div class="verified-badge" title="Verified Account">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+        </div>
+        <div class="owner-info">
+          <p class="owner-name">Angarak Tate</p>
+          <p class="owner-role">Primary Owner</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="dashboard-header">
+        <div class="header-title-group">
+          <div>
+            <h1>rentIQ</h1>
+            <p style="color: var(--text-muted); font-size: 14px; margin-top: 4px;">Minimalist oversight for your rental
+              assets.</p>
+          </div>
+        </div>
+
+        <div class="header-controls">
+          <!-- Search Bar -->
+          <div class="search-container">
+            <i class="fa-solid fa-search"></i>
+            <input id="tenant-search" type="text" placeholder="Search tenants...">
+          </div>
+
+          <!-- Export Button -->
+          <button id="export-csv-btn" class="btn btn-secondary">
+            <i class="fa-solid fa-file-csv"></i> Export CSV
+          </button>
+
+          <!-- Theme Toggle -->
+          <div class="theme-toggle">
+            <i id="theme-icon" class="fa-solid fa-moon"></i>
+            <select id="theme-select">
+              <option value="system">System</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </div>
+
+          <!-- Global Month Selector -->
+          <div class="month-selector">
+            <i class="fa-solid fa-calendar-day"></i>
+            <select id="global-month-select">
+              <!-- Options populated by JS -->
+            </select>
+          </div>
+
+        </div>
+      </header>
+
+      <!-- Dashboard Tab -->
+      <div id="tab-dashboard" class="tab-content active" role="tabpanel" aria-labelledby="tab-dashboard-btn" tabindex="0">
+        <!-- Stats Grid (Operational Insights Row) -->
+        <section class="stats-row" style="margin-bottom: 24px;">
+          <div class="stat-card">
+            <span class="stat-label"><i class="fa-solid fa-chart-pie" style="color: var(--accent); margin-right: 6px;"></i> Collection Efficiency</span>
+            <div class="stat-value text-paid" id="stat-collection-efficiency">0%</div>
+            <div style="font-size: 11px; color: var(--text-dim); margin-top: 4px;" id="stat-efficiency-desc">₹0 of ₹0 collected</div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label"><i class="fa-solid fa-users" style="color: var(--accent); margin-right: 6px;"></i> Occupancy Rate</span>
+            <div class="stat-value text-paid" id="stat-occupancy-rate">0%</div>
+            <div style="font-size: 11px; color: var(--text-dim); margin-top: 4px;" id="stat-occupancy-desc">0 of 0 rooms leased</div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label"><i class="fa-solid fa-vault" style="color: var(--accent); margin-right: 6px;"></i> Deposit Liabilities</span>
+            <div class="stat-value" id="stat-deposit-liabilities" style="color: #3b82f6;">₹0</div>
+            <div style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">Held in treasury trust</div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label"><i class="fa-solid fa-wallet" style="color: var(--accent); margin-right: 6px;"></i> Net Profit & Cashflow</span>
+            <div class="stat-value text-paid" id="net-profit">₹0</div>
+            <div style="font-size: 11px; color: var(--text-dim); margin-top: 4px;" id="stat-cashflow-desc">Collected rent minus expenses</div>
+          </div>
+        </section>
+
+        <!-- Smart Reminder Action Alert -->
+        <div id="smart-reminders-box" class="panel" style="background: var(--bg-surface-hover); border-left: 4px solid var(--accent); padding: var(--space-lg); display: none; margin-bottom: 24px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div>
+              <h4 style="font-size: 13px; font-weight: 700; color: var(--text-main);"><i class="fa-solid fa-bell" style="margin-right: 6px; color: #eab308;"></i> Active Rent Cycle Reminders Alert</h4>
+              <p style="font-size: 12px; color: var(--text-dim); margin-top: 4px;" id="smart-reminders-text">0 residents have rent due on their joining cycle-date today.</p>
+            </div>
+            <button id="smart-remind-btn" class="btn btn-primary btn-sm" style="background: #16a34a; border-color: #16a34a; display: flex; align-items: center; gap: 6px;">
+              <i class="fa-brands fa-whatsapp"></i> Send WhatsApp Reminders
+            </button>
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+          <!-- Left Column -->
+          <div style="display: flex; flex-direction: column; gap: 32px;">
+            <!-- Tenant Ledger -->
+            <section class="panel">
+              <div class="panel-header">
+                <h2 class="panel-title">Tenant Record</h2>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                  <button id="carry-over-btn" class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px;"
+                    title="Copy active tenants from the previous month to this month.">
+                    <i class="fa-solid fa-copy"></i> Import Previous Month Data
+                  </button>
+                  <button id="clear-all-tenants-btn" class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px; color: var(--status-overdue-text); border-color: rgba(239, 68, 68, 0.2); background: rgba(239, 68, 68, 0.05);"
+                    title="Remove all resident records from the active month ledger.">
+                    <i class="fa-solid fa-trash-can"></i> Remove All
+                  </button>
+                </div>
+              </div>
+
+              <div class="resident-entry-card" style="padding: var(--space-xl); background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-xl); margin-bottom: 24px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: var(--space-sm);">
+                  <h3 style="font-size: 13px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.8px; margin: 0;">
+                    <i class="fa-solid fa-user-plus" style="margin-right: 6px; color: var(--accent);"></i> Onboard New Resident
+                  </h3>
+                  <button id="open-calc-btn" class="btn btn-secondary btn-sm" style="padding: 6px 12px; font-size: 11px; display: flex; align-items: center; gap: 6px; border-radius: var(--radius-md);" title="Open Bill Calculator">
+                    <i class="fa-solid fa-calculator" style="color: var(--accent);"></i> Open Bill Calculator
+                  </button>
+                </div>
+
+                <!-- Section 1: Personal Details -->
+                <div class="form-section" style="margin-bottom: 0;">
+                  <div class="form-section-title">
+                    <i class="fa-regular fa-id-card"></i> Personal Details
+                  </div>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 16px; align-items: flex-end;">
+                    <div class="input-wrapper">
+                      <label>Full Name</label>
+                      <div class="input-icon-group" style="position: relative;">
+                        <i class="fa-regular fa-user"></i>
+                        <input id="new-name" type="text" placeholder="e.g. John Doe" autocomplete="off" />
+                        <div id="name-autocomplete-list" class="autocomplete-items" style="display: none;"></div>
+                      </div>
+                    </div>
+                    <div class="input-wrapper">
+                      <label>Phone Number</label>
+                      <div class="input-icon-group">
+                        <i class="fa-solid fa-phone"></i>
+                        <input id="new-phone" type="text" placeholder="+91 98765 43210" />
+                      </div>
+                    </div>
+                    <button id="add-tenant-btn" class="btn btn-primary" style="height: 42px; padding: 0 24px; font-weight: 600; white-space: nowrap; display: flex; align-items: center; gap: 6px;">
+                      <i class="fa-solid fa-user-plus"></i> Onboard Resident
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Dynamic Resident Search & Filter Toolbar -->
+              <div style="display: flex; gap: 16px; margin-bottom: 20px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 16px;">
+                <div class="search-container" style="flex: 1; max-width: 320px; margin: 0;">
+                  <i class="fa-solid fa-magnifying-glass" style="left: 12px;"></i>
+                  <input id="ledger-search" type="text" placeholder="Search resident by name or room..." style="padding-left: 36px; width: 100%;" />
+                </div>
+                <div class="filter-group" style="display: flex; gap: 8px;">
+                  <button class="btn btn-secondary btn-sm filter-tab active" data-filter="all" style="padding: 6px 12px; font-size: 11px;">All</button>
+                  <button class="btn btn-secondary btn-sm filter-tab" data-filter="paid" style="padding: 6px 12px; font-size: 11px;">Paid</button>
+                  <button class="btn btn-secondary btn-sm filter-tab" data-filter="pending" style="padding: 6px 12px; font-size: 11px;">Pending</button>
+                  <button class="btn btn-secondary btn-sm filter-tab" data-filter="overdue" style="padding: 6px 12px; font-size: 11px;">Overdue</button>
+                </div>
+              </div>
+
+              <div id="tenant-list" class="ledger-table-container">
+                <!-- Spatially-rich fintech ledger table populated dynamically by script.js -->
+              </div>
+            </section>
+          </div>
+
+          <!-- Right Column -->
+          <div style="display: flex; flex-direction: column; gap: 32px;">
+            <!-- Bill Calculator -->
+            <section class="panel" id="rent-calculator">
+              <h2 class="panel-title">Bill Calculator</h2>
+
+              <div class="calculator-body">
+                <div class="form-group" style="margin-bottom: 16px;">
+                  <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Select Resident</label>
+                  <div class="input-icon-group" style="position: relative;">
+                    <i class="fa-solid fa-user" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 12px;"></i>
+                    <select id="calc-tenant-select" style="padding: 10px 12px 10px 36px; font-size: 13px; width: 100%; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-surface-hover); color: var(--text-main);">
+                      <option value="">-- Select Active Resident --</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-grid-2">
+                  <div class="form-group">
+                    <label>Prev. Reading</label>
+                    <div class="input-icon-group">
+                      <i class="fa-solid fa-gauge-simple"></i>
+                      <input id="prev-reading" type="number" placeholder="0" />
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label>Curr. Reading</label>
+                    <div class="input-icon-group">
+                      <i class="fa-solid fa-gauge-high"></i>
+                      <input id="curr-reading" type="number" placeholder="0" />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label>Room Category</label>
+                  <div class="input-icon-group">
+                    <i class="fa-solid fa-bed"></i>
+                    <select id="room-type">
+                      <option value="10000">1 BHK - ₹10,000</option>
+                      <option value="7000">2 RK - ₹7,000</option>
+                      <option value="4500">1 RK - ₹4,500</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-grid-2">
+                  <div class="form-group">
+                    <label>Previous Balance</label>
+                    <div class="input-icon-group">
+                      <i class="fa-solid fa-clock-rotate-left"></i>
+                      <input id="last-remaining" type="number" placeholder="₹0" />
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label>Water (Mandatory)</label>
+                    <div class="input-icon-group">
+                      <i class="fa-solid fa-faucet-drip"></i>
+                      <input type="text" value="₹55" readonly
+                        style="background: var(--bg-surface-hover); cursor: not-allowed;" />
+                    </div>
+                  </div>
+                </div>
+
+                  <div class="form-group">
+                    <label>Late Fee (Overdue)</label>
+                    <div class="input-icon-group">
+                      <i class="fa-solid fa-triangle-exclamation"></i>
+                      <input id="late-fee-input" type="number" placeholder="₹0" />
+                    </div>
+                  </div>
+
+
+                <div class="btn-group">
+                  <button id="calc-rent" class="btn btn-primary" style="flex: 2;">Calculate Final</button>
+                  <button id="reset-rent" class="btn btn-secondary" style="flex: 1;">Reset</button>
+                </div>
+
+                <div class="calculation-result">
+                  <div class="result-info" style="flex: 1;">
+                    <p class="result-label">Monthly Rent to be Collected</p>
+                    <p id="total-out" class="result-value">₹0</p>
+                  </div>
+                  <button id="apply-to-resident" class="btn btn-secondary btn-sm" title="Apply to Resident Form">
+                    <i class="fa-solid fa-arrow-left"></i> Apply to Form
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <!-- Removed embedded Upcoming Rent Dues Queue -->
+          </div>
+        </div>
+      </div>
+
+
+
+      <!-- Expenses Tab -->
+      <div id="tab-expenses" class="tab-content" role="tabpanel" aria-labelledby="tab-expenses-btn" tabindex="0">
+        <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr;">
+          <!-- Left: History -->
+          <section class="panel">
+            <h2 class="panel-title">Expense History</h2>
+            <div id="expense-list" class="expense-list" style="max-height: 600px; overflow-y: auto;">
+              <!-- Expenses populated by script.js -->
+            </div>
+          </section>
+
+          <!-- Right: Action -->
+          <section class="panel">
+            <h2 class="panel-title">Record New Expense</h2>
+            <div class="form-group">
+              <label>Description</label>
+              <div class="input-icon-group">
+                <i class="fa-solid fa-pen-nib"></i>
+                <input id="exp-desc" type="text" placeholder="Maintenance, Electricity, etc." />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Amount</label>
+              <div class="input-icon-group">
+                <i class="fa-solid fa-indian-rupee-sign"></i>
+                <input id="exp-amt" type="number" placeholder="₹0" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Attribute to Tenant (Optional - Deducts from Deposit)</label>
+              <div class="input-icon-group">
+                <i class="fa-solid fa-user-tag"></i>
+                <select id="exp-tenant-select">
+                  <option value="">General Property Expense</option>
+                  <!-- Tenants populated by JS -->
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Date</label>
+              <div class="input-icon-group">
+                <i class="fa-solid fa-calendar-day"></i>
+                <input id="exp-date" type="date" />
+              </div>
+            </div>
+            <button id="add-exp-btn" class="btn btn-secondary btn-full" style="margin-top: 20px;">
+              <i class="fa-solid fa-plus-circle"></i> Log Expense
+            </button>
+          </section>
+        </div>
+      </div>
+
+      <!-- Analytics Tab -->
+      <!-- Deposits Tab -->
+      <div id="tab-deposits" class="tab-content" role="tabpanel" aria-labelledby="tab-deposits-btn" tabindex="0">
+        <div class="dashboard-grid" style="grid-template-columns: 1.3fr 1fr;">
+          <!-- Left Column: Ledgers & Timeline -->
+          <div style="display: flex; flex-direction: column; gap: 32px;">
+            <section class="panel">
+              <h2 class="panel-title"><i class="fa-solid fa-vault"></i> Deposit Ledger & Balances</h2>
+              <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 20px;">Review cumulative security deposit balances, monitor liabilities, and manage active tenant balances.</p>
+              <div id="deposit-ledger" class="tenant-list">
+                <!-- Deposits and balances populated by JS -->
+              </div>
+            </section>
+
+            <section class="panel">
+              <h2 class="panel-title"><i class="fa-solid fa-list-check"></i> Deduction & Refund Log</h2>
+              <p style="font-size: 12px; color: var(--text-dim); margin-bottom: 16px;">Historical record of security deposit claims, refunds, and adjustments.</p>
+              <div id="deduction-log" class="timeline-container">
+                <!-- Deduction log populated by JS -->
+              </div>
+            </section>
+          </div>
+
+          <!-- Right Column: Operational Forms -->
+          <div style="display: flex; flex-direction: column; gap: 32px;">
+            <!-- Record Damage Deduction -->
+            <section class="panel">
+              <h2 class="panel-title" style="color: #f87171;"><i class="fa-solid fa-circle-minus"></i> Record Damage Deduction</h2>
+              <p style="font-size: 12px; color: var(--text-dim); margin-bottom: var(--space-lg);">Record a damage claim, room repair fee, or penalty to deduct from tenant deposit.</p>
+              
+              <div class="form-group">
+                <label>Select Resident</label>
+                <div class="input-icon-group">
+                  <i class="fa-solid fa-user"></i>
+                  <select id="deposit-deduct-tenant">
+                    <!-- Loaded dynamically via JS -->
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Deduction Amount (₹)</label>
+                <div class="input-icon-group">
+                  <i class="fa-solid fa-indian-rupee-sign"></i>
+                  <input id="deposit-deduct-amount" type="number" placeholder="e.g. 1500" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Reason / Description</label>
+                <div class="input-icon-group">
+                  <i class="fa-regular fa-comment-dots"></i>
+                  <input id="deposit-deduct-reason" type="text" placeholder="e.g. Wall painting or broken window" />
+                </div>
+              </div>
+
+              <button id="deposit-deduct-btn" class="btn btn-primary" style="width: 100%; margin-top: 12px; background: #dc2626; border-color: #dc2626;">
+                <i class="fa-solid fa-circle-minus"></i> Deduct from Deposit
+              </button>
+            </section>
+
+            <!-- Refund/Return Deposit -->
+            <section class="panel">
+              <h2 class="panel-title" style="color: #4ade80;"><i class="fa-solid fa-hand-holding-dollar"></i> Process Move-out Refund</h2>
+              <p style="font-size: 12px; color: var(--text-dim); margin-bottom: var(--space-lg);">Process a final security deposit refund to a resident moving out of the unit.</p>
+              
+              <div class="form-group">
+                <label>Select Resident</label>
+                <div class="input-icon-group">
+                  <i class="fa-solid fa-user"></i>
+                  <select id="deposit-refund-tenant">
+                    <!-- Loaded dynamically via JS -->
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Refund Amount (₹)</label>
+                <div class="input-icon-group">
+                  <i class="fa-solid fa-indian-rupee-sign"></i>
+                  <input id="deposit-refund-amount" type="number" placeholder="Full or partial amount" />
+                </div>
+              </div>
+
+              <button id="deposit-refund-btn" class="btn btn-primary" style="width: 100%; margin-top: 12px; background: #16a34a; border-color: #16a34a;">
+                <i class="fa-solid fa-hand-holding-dollar"></i> Process Final Refund
+              </button>
+            </section>
+          </div>
+        </div>
+      </div>
+
+      <!-- Directory Tab -->
+      <div id="tab-directory" class="tab-content" role="tabpanel" aria-labelledby="tab-directory-btn" tabindex="0">
+        <div class="dashboard-grid" style="grid-template-columns: 350px 1fr; gap: 24px; align-items: start;">
+          <!-- Left Column: Add Contact -->
+          <div style="display: flex; flex-direction: column; gap: 24px;">
+            <section class="panel" style="padding: 24px; border-radius: var(--radius-xl); border: 1px solid var(--border); background: var(--bg-surface);">
+              <h2 class="panel-title" style="font-size: 15px; font-weight: 700; margin-bottom: 8px; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-user-plus" style="color: var(--accent);"></i> Add Resident Record
+              </h2>
+              <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 24px; line-height: 1.5;">Permanently register and link resident profiles to your dashboard ledger database.</p>
+              
+              <div class="form-group" style="margin-bottom: 16px;">
+                <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Full Name</label>
+                <div class="input-icon-group" style="position: relative;">
+                  <i class="fa-solid fa-user" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 12px;"></i>
+                  <input id="dir-name" type="text" placeholder="e.g. Ramesh Kumar" style="padding: 10px 12px 10px 36px; font-size: 13px; width: 100%; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-surface-hover); color: var(--text-main);" />
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 16px;">
+                <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Phone Number</label>
+                <div class="input-icon-group" style="position: relative;">
+                  <i class="fa-solid fa-phone" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 12px;"></i>
+                  <input id="dir-phone" type="text" placeholder="10-digit number" style="padding: 10px 12px 10px 36px; font-size: 13px; width: 100%; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-surface-hover); color: var(--text-main);" />
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 16px;">
+                <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Joining Date</label>
+                <div class="input-icon-group" style="position: relative;">
+                  <i class="fa-solid fa-calendar-day" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 12px;"></i>
+                  <input id="dir-join-date" type="date" style="padding: 10px 12px 10px 36px; font-size: 13px; width: 100%; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-surface-hover); color: var(--text-main);" />
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 16px;">
+                <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Deposit Amount (₹)</label>
+                <div class="input-icon-group" style="position: relative;">
+                  <i class="fa-solid fa-vault" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 12px;"></i>
+                  <input id="dir-deposit-amount" type="number" placeholder="e.g. 10000" style="padding: 10px 12px 10px 36px; font-size: 13px; width: 100%; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-surface-hover); color: var(--text-main);" />
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 24px;">
+                <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Deposit Collected Date</label>
+                <div class="input-icon-group" style="position: relative;">
+                  <i class="fa-solid fa-calendar-check" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 12px;"></i>
+                  <input id="dir-deposit-date" type="date" style="padding: 10px 12px 10px 36px; font-size: 13px; width: 100%; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-surface-hover); color: var(--text-main);" />
+                </div>
+              </div>
+
+              <button id="dir-add-btn" class="btn btn-primary" style="width: 100%; height: 42px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: var(--radius-md);">
+                <i class="fa-solid fa-address-book"></i> Save Record
+              </button>
+            </section>
+          </div>
+
+          <!-- Right Column: Directory List -->
+          <div style="display: flex; flex-direction: column; gap: 24px;">
+            <section class="panel" style="padding: 24px; border-radius: var(--radius-xl); border: 1px solid var(--border); background: var(--bg-surface);">
+              <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border);">
+                <h2 class="panel-title" style="font-size: 15px; font-weight: 700; margin: 0; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+                  <i class="fa-solid fa-address-book" style="color: var(--accent);"></i> Resident Registry
+                </h2>
+                <div class="input-icon-group" style="width: 240px; position: relative;">
+                  <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 12px;"></i>
+                  <input id="dir-search" type="text" placeholder="Search registry..." style="padding: 8px 12px 8px 36px; font-size: 12px; width: 100%; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-surface-hover); color: var(--text-main);" />
+                </div>
+              </div>
+
+              <div class="table-responsive">
+                <table class="ledger-table" style="width: 100%; border-collapse: collapse;">
+                  <thead>
+                    <tr>
+                      <th class="ledger-th" style="padding: 12px 16px;">Name</th>
+                      <th class="ledger-th" style="padding: 12px 16px;">Linked Phone</th>
+                      <th class="ledger-th" style="padding: 12px 16px;">Joining Date</th>
+                      <th class="ledger-th" style="padding: 12px 16px;">Deposit Held</th>
+                      <th class="ledger-th" style="padding: 12px 16px;">Deposit Date</th>
+                      <th class="ledger-th" style="padding: 12px 16px; text-align: right;">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dir-tbody">
+                    <!-- Loaded dynamically via JS -->
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+
+      <!-- Timeline Tab -->
+      <div id="tab-timeline" class="tab-content" role="tabpanel" aria-labelledby="tab-timeline-btn" tabindex="0">
+        <div style="max-width: 900px; margin: 0 auto;">
+          <section class="panel">
+            <h2 class="panel-title"><i class="fa-solid fa-chart-line" style="margin-right: 6px; color: var(--accent);"></i> Operational Event Timeline</h2>
+            <p style="font-size: 13px; color: var(--text-dim); margin-bottom: var(--space-lg);">Real-time audit track of properties, leases, financial collections, offboardings, and automated reminder dispatches.</p>
+            <div id="activity-timeline-feed" class="timeline-container" style="max-height: 700px; overflow-y: auto;">
+              <!-- Dynamically populated via JS -->
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div id="tab-analytics" class="tab-content" role="tabpanel" aria-labelledby="tab-analytics-btn" tabindex="0">
+        <div class="stats-row" style="grid-template-columns: repeat(3, 1fr);">
+          <div class="stat-card">
+            <span class="stat-label">Revenue vs Expenses</span>
+            <div style="height: 250px; display: flex; justify-content: center;">
+              <canvas id="revenueChart"></canvas>
+            </div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Deposit Breakdown</span>
+            <div style="height: 250px;">
+              <canvas id="depositChart"></canvas>
+            </div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Property Income Split</span>
+            <div style="height: 250px;">
+              <canvas id="propertyChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Calendar Tab -->
+      <div id="tab-calendar" class="tab-content" role="tabpanel" aria-labelledby="tab-calendar-btn" tabindex="0">
+        <section class="panel">
+          <div class="calendar-header">
+            <button id="prev-month" class="btn btn-secondary"><i class="fa-solid fa-chevron-left"></i> Prev</button>
+            <h2 id="current-month-display" style="font-size: 18px; font-weight: 700;">May 2026</h2>
+            <button id="next-month" class="btn btn-secondary">Next <i class="fa-solid fa-chevron-right"></i></button>
+          </div>
+          <div class="calendar-grid" id="calendar-grid">
+            <!-- Calendar Days will be injected here -->
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modals -->
+  <!-- Receipt Modal -->
+  <div class="modal-overlay" id="receipt-modal">
+    <div class="modal-content modal-receipt">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title">Rent Receipt</h2>
+          <p class="modal-subtitle">rentIQ</p>
+        </div>
+        <button id="close-receipt" class="action-btn no-print"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body-grid">
+        <div class="receipt-item">
+          <p class="receipt-label">Received From</p>
+          <p id="receipt-tenant" class="receipt-value">-</p>
+        </div>
+        <div class="receipt-item">
+          <p class="receipt-label">Date</p>
+          <p id="receipt-date" class="receipt-value">-</p>
+        </div>
+        <div class="receipt-item">
+          <p class="receipt-label">Property</p>
+          <p id="receipt-property" class="receipt-value">-</p>
+        </div>
+        <div class="owner-info">
+          <p class="owner-name">Anshul Agrakttate</p>
+          <p class="owner-role">Primary Owner</p>
+        </div>
+      </div>
+
+
+
+      <div class="modal-body-grid">
+        <div class="receipt-item">
+          <p class="receipt-label">Water Charge</p>
+          <p class="receipt-value">₹55</p>
+        </div>
+        <div class="receipt-item"
+          style="grid-column: span 2; border-top: 1px solid var(--border); padding-top: 16px; margin-top: 8px;">
+          <p class="receipt-label">Total Amount Paid</p>
+          <p id="receipt-total" class="receipt-value highlight" style="font-size: 24px;">-</p>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <p class="footer-note">Thank you for your prompt payment.</p>
+        <button id="print-receipt-btn" class="btn btn-primary btn-full no-print">
+          <i class="fa-solid fa-print"></i> Print Receipt
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR Code Modal -->
+  <div class="modal-overlay" id="qr-modal">
+    <div class="modal-content modal-qr">
+      <div class="modal-header">
+        <h2 class="modal-title">Scan to Pay</h2>
+        <button id="close-modal" class="action-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="qr-info">
+        <p id="qr-tenant-name" class="qr-tenant">Tenant Name</p>
+        <p id="qr-amount" class="qr-amount">₹0</p>
+      </div>
+      <div class="qr-container">
+        <img id="qr-image" src="" alt="Payment QR Code" />
+      </div>
+      <p class="qr-footer">Supports GPay, PhonePe, Paytm, and other UPI apps.</p>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+
+</html>

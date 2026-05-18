@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id            String           @id @default(cuid())
+  email         String           @unique
+  password      String
+  name          String?
+  phone         String?
+  role          Role             @default(TENANT)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  conversations AIConversation[]
+  leases        Lease[]          @relation("UserLeases")
+  properties    Property[]       @relation("LandlordProperties")
+  refreshTokens RefreshToken[]
+}
+
+model Property {
+  id         String    @id @default(cuid())
+  name       String
+  address    String?
+  landlordId String
+  createdAt  DateTime  @default(now())
+  expenses   Expense[]
+  landlord   User      @relation("LandlordProperties", fields: [landlordId], references: [id], onDelete: Cascade)
+  units      Unit[]
+}
+
+model Unit {
+  id         String   @id @default(cuid())
+  name       String
+  propertyId String
+  createdAt  DateTime @default(now())
+  leases     Lease[]
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+}
+
+model Lease {
+  id             String        @id @default(cuid())
+  tenantId       String
+  unitId         String
+  rentAmount     Float
+  cycle          String
+  startDate      DateTime
+  endDate        DateTime?
+  initialDeposit Float         @default(0)
+  currentDeposit Float         @default(0)
+  deductions     Deduction[]
+  tenant         User          @relation("UserLeases", fields: [tenantId], references: [id], onDelete: Cascade)
+  unit           Unit          @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  invoices       RentInvoice[]
+}
+
+model Deduction {
+  id      String   @id @default(cuid())
+  leaseId String
+  amount  Float
+  reason  String
+  date    DateTime @default(now())
+  lease   Lease    @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+}
+
+model Expense {
+  id          String    @id @default(cuid())
+  propertyId  String?
+  description String
+  amount      Float
+  date        DateTime  @default(now())
+  property    Property? @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+}
+
+model RentInvoice {
+  id        String    @id @default(cuid())
+  leaseId   String
+  amount    Float
+  dueDate   DateTime
+  paid      Boolean   @default(false)
+  paidAt    DateTime?
+  lateFee   Float     @default(0)
+  createdAt DateTime  @default(now())
+  payments  Payment[]
+  lease     Lease     @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id              String      @id @default(cuid())
+  invoiceId       String
+  stripePaymentId String?
+  amount          Float
+  currency        String      @default("INR")
+  status          String
+  createdAt       DateTime    @default(now())
+  invoice         RentInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+model AIConversation {
+  id        String   @id @default(cuid())
+  userId    String
+  role      String
+  message   String
+  response  String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model NotificationLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  type      String
+  payload   Json
+  status    String
+  tryCount  Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+enum Role {
+  LANDLORD
+  TENANT
+  ADMIN
+}
