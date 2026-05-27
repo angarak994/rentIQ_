@@ -19,7 +19,7 @@ A rental management platform for landlords and tenants to manage properties, pay
 ## Installation
 
 ```bash
-git clone https://github.com/phantom-0994/rentIQ_.git
+git clone https://github.com/angarak994/rentIQ_.git
 cd rentIQ_
 npm install
 npm run dev
